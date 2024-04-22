@@ -22,7 +22,8 @@
     },
     methods: {
       login: function (userName) {
-        if (!userName.trim()) {  // Check if the username is empty or only contains whitespace
+        if (!userName.trim() || this.userLoggedIn) {
+          // Check if the username is empty or only contains whitespace
           // alert('Finally you have an opportunity to choose a great nickname by yourself and not someone else. Why not do it?');
           return;
         }
@@ -40,7 +41,7 @@
         }
         return false;
       },
-      scrollToBottom: function() {
+      scrollToBottom: function () {
         this.$nextTick(() => {
           const container = this.$refs.chatHistory;
           container.scrollTop = container.scrollHeight;
@@ -54,12 +55,12 @@
           // return;
         }
 
-        console.log("playMp3 now")
+        console.log("playMp3 now");
 
         var request = new XMLHttpRequest();
         var audioBuffer;
 
-        var bitrate = 128 * 1000 / 8; // 16000 bytes per second
+        var bitrate = (128 * 1000) / 8; // 16000 bytes per second
         // Calculate the byte range to request based on the start time and the file's bitrate
         var rangeStart = Math.floor(startTime * bitrate); // replace 'bitrate' with the actual bitrate
 
@@ -103,7 +104,7 @@
           console.log("Playing next track");
         }
       },
-      initAudioContext: function() {
+      initAudioContext: function () {
         console.log("initAudioContext");
 
         this.audioContext = new AudioContext();
@@ -129,15 +130,15 @@
         this.loadPresets();
 
         // Create the AudioContext only when a user gesture is made
-        document.documentElement.addEventListener('mousedown', () => {
+        document.documentElement.addEventListener("mousedown", () => {
           if (!this.audioContext) {
             this.initAudioContext();
-          } else if (this.audioContext.state === 'suspended') {
+          } else if (this.audioContext.state === "suspended") {
             this.audioContext.resume();
           }
         });
       },
-      loadPresets: function() {
+      loadPresets: function () {
         this.presets = {};
         if (window.butterchurnPresets) {
           Object.assign(this.presets, butterchurnPresets.getPresets());
@@ -146,11 +147,11 @@
           Object.assign(this.presets, butterchurnPresetsExtra.getPresets());
         }
       },
-      startRenderer: function() {
+      startRenderer: function () {
         requestAnimationFrame(() => this.startRenderer());
         this.visualizer.render();
       },
-      nextPreset: function(randomValue = null) {
+      nextPreset: function (randomValue = null) {
         var presetIndex = 0;
         var blendTime = 5.7;
 
@@ -171,7 +172,7 @@
 
         this.visualizer.loadPreset(preset, blendTime);
       },
-      connectToAudioAnalyzer: function(sourceNode) {
+      connectToAudioAnalyzer: function (sourceNode) {
         console.log("connectToAudioAnalyzer");
         if (this.delayedAudible) {
           this.delayedAudible.disconnect();
@@ -180,7 +181,7 @@
         this.delayedAudible = this.audioContext.createDelay();
         this.delayedAudible.delayTime.value = 0.26;
 
-        sourceNode.connect(this.delayedAudible)
+        sourceNode.connect(this.delayedAudible);
         // this.delayedAudible.connect(this.audioContext.destination);
 
         console.log("delayedAudible", this.delayedAudible);
@@ -195,13 +196,12 @@
         this.sourceNode = this.audioContext.createMediaStreamSource(stream);
         this.visualizer.connectAudio(this.sourceNode);
       },
-      playCurrentTrack: function() {
+      playCurrentTrack: function () {
         if (this.track) {
-
           var elapsedSeconds = 0;
           if (this.trackStarted) {
             var now = Date.now();
-            console.log("dataStarted", this.trackStarted)
+            console.log("dataStarted", this.trackStarted);
             var elapsed = now - this.trackStarted; // Time elapsed in milliseconds
             var elapsedSeconds = elapsed / 1000; // Convert to seconds
           }
@@ -281,16 +281,22 @@
           }.bind(this)
         );
 
-        socket.on('userCount', function (data) {
-          console.log('Number of users: ' + data.count);
-          // Update UI here
-          this.userCount = data.count;
-        }.bind(this));
+        socket.on(
+          "userCount",
+          function (data) {
+            console.log("Number of users: " + data.count);
+            // Update UI here
+            this.userCount = data.count;
+          }.bind(this)
+        );
 
-        socket.on('changeVisuals', function (randomValue) {
-          console.log("change visuals request", randomValue);
-          this.nextPreset(randomValue);
-        }.bind(this));
+        socket.on(
+          "changeVisuals",
+          function (randomValue) {
+            console.log("change visuals request", randomValue);
+            this.nextPreset(randomValue);
+          }.bind(this)
+        );
       },
     },
     computed: {

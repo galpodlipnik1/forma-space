@@ -6,6 +6,7 @@ var app = express();
 
 // var request = require('request');
 const request = require("request-promise");
+const logger = require('./logging');
 
 var http = require('http').Server(app);
 var socketio = require('socket.io')(http);
@@ -45,30 +46,41 @@ main loop
 - use db
 */
 
+
+/**
+ * Returns a random number between min (inclusive) and max (exclusive)
+ * @param {number} min - The minimum number.
+ * @param {number} max - The maximum number.
+ * @returns {number} A random number.
+ */
 function between(min, max) {  
   return Math.floor(
     Math.random() * (max - min) + min
   )
 }
 
+/**
+ * Plays the next track in the queue or a random track if the queue is empty.
+ * @returns {Promise<void>}
+ */
 async function playNext() {
   var track = null;
   try {
     if (queue.length > 0) {
-      console.log("Pull track from the queue");
+      logger.info("Pull track from the queue");
       track = queue.shift();
     } else {
-      console.log("Get random next track");
+      logger.info("Get random next track");
       track = await getTrack(between(0, 3000));
     }
   } catch (error) {
-    console.error(error);
+    logger.error("Failed to get track", error);
     setTimeout(playNext, 5000); // Try again after 5 seconds
     return;
   }
 
   if (!track) {
-    console.log("Couldn't get the track. Trying again");
+    logger.error("Couldn't get the track. Trying again");
     setTimeout(playNext, 5000); // Try again after 5 seconds
     return;
   }
@@ -91,7 +103,7 @@ async function playNext() {
   // add ability to cancel the timeout
   setTimeout(
     function() {
-      console.log("playing next track");
+      logger.info("Track ended, playing next");
       playNext();
     }, currentState.length * 1000);
   // broadcast to all to play this track
@@ -103,13 +115,24 @@ async function playNext() {
 - pull track 
 */
 
+/**
+ * Stores a log item of a certain type.
+ * @param {string} type - The type of the log item.
+ * @param {any} item - The log item.
+ */
 function storeLog(type, item) {
   logs.push([type, item]);
-  console.log("logs", logs);
+  logger.info(`Stored logs: ${logs}`);
 }
 
+/**
+ * Stores a log item of a certain type and emits it to a socket.
+ * @param {socketio} socket - The socket to emit the item to.
+ * @param {string} type - The type of the log item.
+ * @param {any} item - The log item.
+ */
 function storeEmit(socket, type, item) {
-  console.log("item", item);
+  logger.info(`storeEmit: ${type} ${item}`);
   if (!item || !item.time) {
     item['time'] = Date.now;
   }
@@ -118,17 +141,22 @@ function storeEmit(socket, type, item) {
   socket.emit(type, item);
 }
 
+/**
+ * Parses a command from a socket message.
+ * @param {socketio} socket - The socket the message came from.
+ * @param {Object} data - The message data.
+ */
 function parseCmd(socket, data) {
   let args = data.message.split(" ")
   if (args.length < 2) {
-    console.log(`Command missing args: ${data.message}`);
+    logger.error(`Command missing args: ${data.message}`);
     socket.emit('message', botMessage(`Command missing args: ${data.message}`));
     // send message back
     return;
   }
 
   if (args[0] < 2) {
-    console.log(`Command too short ${args[0]}`);
+    logger.error(`Command too short ${args[0]}`);
     socket.emit('message', botMessage(`Command too short ${args[0]}`));
     return;
   }
@@ -151,7 +179,7 @@ function parseCmd(socket, data) {
         break;
 
     default:
-      console.log(`Sorry, we are out of ${cmd}. Did you mean some techno?!`);
+      logger.error(`Sorry, we are out of ${cmd}. Did you mean some techno?!`);
   }
 }
 
@@ -161,16 +189,27 @@ cmds: /p 2390/shoshin
 cmds: /p kundi - shoshin
 */
 
+/**
+ * Checks if a string is numeric.
+ * @param {string} str - The string to check.
+ * @returns {boolean} Whether the string is numeric.
+ */
 function isNumeric(str) {
   if (typeof str != "string") return false // we only process strings!  
   return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
          !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
 }
 
+/**
+ * Plays a track based on a command from a socket.
+ * @param {socketio} socket - The socket the command came from.
+ * @param {Array<string>} args - The command arguments.
+ * @returns {Promise<void>}
+ */
 async function cmdPlay(socket, args) {
   // check if valid track
   // if ()
-  console.log("cmdPlay", args);
+  logger.info("cmdPlay", args);
 
   let track = null;
 
@@ -180,7 +219,7 @@ async function cmdPlay(socket, args) {
   }
 
   if (track) {
-    console.log("found track", track);
+    logger.info("found track", track);
     queue.push(track);
     socket.emit('message', botMessage(`Added <b>${track.data.attributes.display_name}</b> to the queue.`));
   } else {
@@ -188,7 +227,7 @@ async function cmdPlay(socket, args) {
   }
   // make async
 
-  console.log("queue", queue);
+  logger.info("queue", queue);
 }
 
 /*
@@ -203,6 +242,11 @@ function getTrack(trackId) {
 }
 */
 
+/**
+ * Retrieves a track by its ID.
+ * @param {number} trackId - The ID of the track.
+ * @returns {Promise<Object>} The track data.
+ */
 async function getTrack(trackId) {
   try {
     const r = await request({
@@ -211,12 +255,17 @@ async function getTrack(trackId) {
     });
     return r;
   } catch (error) {
-    console.log(error.response.body);
+    logger.error("Failed to get track", error.response.body);
     // throw new Error('Failed to get track');
     return false;
   }
 }
 
+/**
+ * Creates a bot message.
+ * @param {string} message - The message content.
+ * @returns {Object} The bot message.
+ */
 function botMessage(message) {
   return {
     time: Date.now(),
@@ -225,14 +274,22 @@ function botMessage(message) {
   }
 }
 
+/**
+ * Sends the log to a socket.
+ * @param {socketio} socket - The socket to send the log to.
+ */
 function sendLog(socket) {
   logs.forEach(function(log){
     socket.emit(log[0], log[1]);
   });
 }
 
+/**
+ * Initializes a connection with a socket.
+ * @param {socketio} socket - The socket to initialize the connection with.
+ */
 function initConnection(socket) {
-  console.log("currentState", currentState);
+  logger.info("initConnection", currentState);
   if (currentState.track) {
     socket.emit("event", { action: "play", track: currentState.track, started: currentState.started });
     socket.emit("message", botMessage(`Currently playing ${currentState.track.data.attributes.display_name} `));
@@ -240,13 +297,13 @@ function initConnection(socket) {
 }
 
 socketio.on('connection', function (socket) {
-  console.log("A user connected. Socket id: " + socket.id);
+  logger.info("A user connected. Socket id: " + socket.id);
 
   initConnection(socket);
 
   // on join
   socket.on('join', function (userName) {
-    console.log('user change name to : ' + userName);
+    logger.info('user change name to : ' + userName);
 
     socket.userName = userName;
     users.push(userName);
@@ -266,14 +323,14 @@ socketio.on('connection', function (socket) {
     socketio.sockets.emit('userCount', { count: users.length });
 
     // cool
-    console.log("Sending socket log to the user");
+    logger.info("Sending socket log to the user");
     sendLog(socket);
     socket.emit("message", botMessage("Only for you"));
   });
 
   // on message
   socket.on('message', function (message) {
-    console.log(socket.userName + ' says: ' + message);
+    logger.info(socket.userName + ' says: ' + message);
 
     var data = {
       time: Date.now(),
@@ -310,15 +367,19 @@ socketio.on('connection', function (socket) {
     //notice it is not socket.emit('refreshUserList', users)
     socketio.sockets.emit('refreshUserList', users);
 
-    console.log('user ' + socket.userName + ' disconnected');
+    logger.info('user ' + socket.userName + ' disconnected');
   });
 });
 
 http.listen(port, function () {
-  console.log("Running on port: " + port);
+  logger.info("Running on port: " + port);
   playNext();
 });
 
+/**
+ * Emits a change visuals event at a certain interval.
+ * @param {number} intervalInSeconds - The interval in seconds.
+ */
 function emitChangeVisuals(intervalInSeconds) {
   setInterval(() => {
     const randomNumber = Math.random(); // Generate a random number between 0 and 100
