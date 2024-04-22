@@ -4,7 +4,6 @@ const { combine, timestamp, align, colorize, printf } = winston.format;
 const logger = winston.createLogger({
   level: 'info',
   format: combine(
-    colorize({ all: true }),
     timestamp({
       format: 'DD.MM.YYYY hh:mm:ss.SSS A',
     }),
@@ -19,7 +18,25 @@ const logger = winston.createLogger({
 });
 
 if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console());
+  logger.add(
+    new winston.transports.Console({
+      format: combine(
+        colorize({ all: true }),
+        timestamp({
+          format: 'DD.MM.YYYY hh:mm:ss.SSS A',
+        }),
+        align(),
+        printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`)
+      ),
+    })
+  );
 }
 
-module.exports = logger;
+function replacer(key, value) {
+  if (this[key] instanceof Object && key) {
+    return '[Object]';
+  }
+  return value;
+}
+
+module.exports = { logger, replacer };

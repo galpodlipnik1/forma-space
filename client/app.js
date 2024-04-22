@@ -5,20 +5,20 @@
 // import { queue } from "jquery";
 
 (function () {
-  var socket = io();
+  let socket = io();
 
-  var vue = new Vue({
-    el: "#app",
+  let vue = new Vue({
+    el: '#app',
     data: {
-      userName: "",
+      userName: '',
       track: null,
       audioContext: null, // new AudioContext(),
       queue: [],
       userList: [],
       userLoggedIn: false,
-      message: "",
+      message: '',
       messagesHist: [],
-      userCount: 0, 
+      userCount: 0,
     },
     methods: {
       login: function (userName) {
@@ -28,15 +28,15 @@
           return;
         }
 
-        socket.emit("join", userName);
+        socket.emit('join', userName);
         this.userName = userName;
-        console.log("username", this.userName);
+        console.log('username', this.userName);
         this.userLoggedIn = true;
       },
       sendMessage: function (message) {
-        if (message.trim() !== "") {
-          socket.emit("message", message);
-          this.message = "";
+        if (message.trim() !== '') {
+          socket.emit('message', message);
+          this.message = '';
           this.scrollToBottom();
         }
         return false;
@@ -48,32 +48,30 @@
         });
       },
       playMp3: function (url, startTime = 0) {
-        console.log("playMp3 called");
+        console.log('playMp3 called');
         if (!this.audioContext) {
-          console.log("playMp3 initAudioContext was not initialized");
+          console.log('playMp3 initAudioContext was not initialized');
           this.initAudioContext();
           // return;
         }
 
-        console.log("playMp3 now");
+        console.log('playMp3 now');
 
-        var request = new XMLHttpRequest();
-        var audioBuffer;
+        let request = new XMLHttpRequest();
 
-        var bitrate = (128 * 1000) / 8; // 16000 bytes per second
-        // Calculate the byte range to request based on the start time and the file's bitrate
-        var rangeStart = Math.floor(startTime * bitrate); // replace 'bitrate' with the actual bitrate
+        let bitrate = (128 * 1000) / 8;
+        let rangeStart = Math.floor(startTime * bitrate);
 
-        request.open("GET", url, true);
-        request.responseType = "arraybuffer";
+        request.open('GET', url, true);
+        request.responseType = 'arraybuffer';
 
-        request.setRequestHeader("Range", "bytes=" + rangeStart + "-");
+        request.setRequestHeader('Range', 'bytes=' + rangeStart + '-');
 
         request.onload = function () {
           this.audioContext.decodeAudioData(
             request.response,
             function (buffer) {
-              var bufferSource = this.audioContext.createBufferSource();
+              let bufferSource = this.audioContext.createBufferSource();
               bufferSource.buffer = buffer;
               bufferSource.connect(this.audioContext.destination);
               // bufferSource.start(startTime);
@@ -84,7 +82,7 @@
               this.connectToAudioAnalyzer(bufferSource);
 
               bufferSource.onended = function () {
-                console.log("Your audio has finished playing");
+                console.log('Your audio has finished playing');
                 this.playNext();
               }.bind(this);
             }.bind(this)
@@ -95,24 +93,24 @@
       },
       playNext: function () {
         if (this.queue.length > 0) {
-          var track = this.queue.shift();
+          let track = this.queue.shift();
           this.track = track;
           this.playMp3(
-            "http://localhost:3000/fwd?url=" +
+            'http://localhost:3000/fwd?url=' +
               track.data.attributes.low_quality_url
           );
-          console.log("Playing next track");
+          console.log('Playing next track');
         }
       },
       initAudioContext: function () {
-        console.log("initAudioContext");
+        console.log('initAudioContext');
 
         this.audioContext = new AudioContext();
-        console.log("audioContext", this.audioContext);
+        console.log('audioContext', this.audioContext);
 
         this.visualizer = butterchurn.default.createVisualizer(
           this.audioContext,
-          document.getElementById("canvas"),
+          document.getElementById('canvas'),
           {
             width: 800,
             height: 600,
@@ -124,16 +122,16 @@
         this.startRenderer();
       },
       initApp: function () {
-        console.log("initApp");
-        console.log("audioContext", this.audioContext);
+        console.log('initApp');
+        console.log('audioContext', this.audioContext);
 
         this.loadPresets();
 
         // Create the AudioContext only when a user gesture is made
-        document.documentElement.addEventListener("mousedown", () => {
+        document.documentElement.addEventListener('mousedown', () => {
           if (!this.audioContext) {
             this.initAudioContext();
-          } else if (this.audioContext.state === "suspended") {
+          } else if (this.audioContext.state === 'suspended') {
             this.audioContext.resume();
           }
         });
@@ -152,28 +150,26 @@
         this.visualizer.render();
       },
       nextPreset: function (randomValue = null) {
-        var presetIndex = 0;
-        var blendTime = 5.7;
+        let presetIndex = 0;
+        let blendTime = 5.7;
 
-        console.log("presets", this.presets);
-
-        var presetKeys = Object.keys(this.presets);
+        console.log('presets', this.presets);
+        let presetKeys = Object.keys(this.presets);
 
         if (!randomValue) {
           randomValue = Math.random();
         }
         presetIndex = Math.floor(randomValue * presetKeys.length);
 
-        // console.log("presetKeys", presetKeys);
-        console.log("presetIndex", presetIndex);
+        console.log('presetIndex', presetIndex);
 
-        var preset = this.presets[presetKeys[presetIndex]];
-        console.log("preset", preset);
+        let preset = this.presets[presetKeys[presetIndex]];
+        console.log('preset', preset);
 
         this.visualizer.loadPreset(preset, blendTime);
       },
       connectToAudioAnalyzer: function (sourceNode) {
-        console.log("connectToAudioAnalyzer");
+        console.log('connectToAudioAnalyzer');
         if (this.delayedAudible) {
           this.delayedAudible.disconnect();
         }
@@ -184,7 +180,7 @@
         sourceNode.connect(this.delayedAudible);
         // this.delayedAudible.connect(this.audioContext.destination);
 
-        console.log("delayedAudible", this.delayedAudible);
+        console.log('delayedAudible', this.delayedAudible);
         this.visualizer.connectAudio(this.delayedAudible);
         return this.delayedAudible;
       },
@@ -198,18 +194,18 @@
       },
       playCurrentTrack: function () {
         if (this.track) {
-          var elapsedSeconds = 0;
+          let elapsedSeconds = 0;
           if (this.trackStarted) {
-            var now = Date.now();
-            console.log("dataStarted", this.trackStarted);
-            var elapsed = now - this.trackStarted; // Time elapsed in milliseconds
-            var elapsedSeconds = elapsed / 1000; // Convert to seconds
+            let now = Date.now();
+            console.log('dataStarted', this.trackStarted);
+            let elapsed = now - this.trackStarted;
+            elapsedSeconds = elapsed / 1000;
           }
 
-          console.log("elapsedSeconds", elapsedSeconds);
+          console.log('elapsedSeconds', elapsedSeconds);
 
           this.playMp3(
-            "http://localhost:3000/fwd?url=" +
+            'http://localhost:3000/fwd?url=' +
               this.track.data.attributes.low_quality_url,
             elapsedSeconds
           );
@@ -217,7 +213,7 @@
       },
       initSocket: function () {
         socket.on(
-          "message",
+          'message',
           function (data) {
             this.messagesHist.push(data);
             this.scrollToBottom();
@@ -225,12 +221,12 @@
         );
 
         socket.on(
-          "event",
+          'event',
           function (data) {
             // this.messagesHist.push(data);
 
-            if (data.action == "play") {
-              console.log("play the track", data.track);
+            if (data.action == 'play') {
+              console.log('play the track', data.track);
 
               if (this.track == null) {
                 this.track = data.track;
@@ -251,49 +247,49 @@
         );
 
         socket.on(
-          "refreshUserList",
+          'refreshUserList',
           function (users) {
             this.userList = users;
           }.bind(this)
         );
 
         socket.on(
-          "connect",
+          'connect',
           function () {
-            console.log("connected");
+            console.log('connected');
             console.log(socket.connected); // true
 
             // login
-            console.log("username", this.userName);
+            console.log('username', this.userName);
 
             if (this.userName) {
-              console.log("Logging back");
+              console.log('Logging back');
               this.login(this.userName);
             }
           }.bind(this)
         );
 
         socket.on(
-          "disconnect",
+          'disconnect',
           function (err) {
-            console.log("disconnected");
-            console.log("disconnect", err);
+            console.log('disconnected');
+            console.log('disconnect', err);
           }.bind(this)
         );
 
         socket.on(
-          "userCount",
+          'userCount',
           function (data) {
-            console.log("Number of users: " + data.count);
+            console.log('Number of users: ' + data.count);
             // Update UI here
             this.userCount = data.count;
           }.bind(this)
         );
 
         socket.on(
-          "changeVisuals",
+          'changeVisuals',
           function (randomValue) {
-            console.log("change visuals request", randomValue);
+            console.log('change visuals request', randomValue);
             this.nextPreset(randomValue);
           }.bind(this)
         );
@@ -303,7 +299,7 @@
       // a computed getter
       timeLeft: function () {
         // `this` points to the vm instance
-        return this.message.split("").reverse().join("");
+        return this.message.split('').reverse().join('');
       },
     },
   });

@@ -1,23 +1,25 @@
 (function ($) {
   $.fn.customerPopup = function (e, url, width, height, resize) {
-
     // Prevent default anchor event
     e.preventDefault();
 
     // Set values for window
     width = width || '500';
     height = height || '400';
-    resize = (resize ? 'yes' : 'no');
+    resize = resize ? 'yes' : 'no';
 
     // Set title and open popup with focus on it
-    var title = ((typeof this.attr('title') !== undefined) ? this.attr('title') : 'Social Share'),
+    var title =
+        typeof this.attr('title') !== undefined
+          ? this.attr('title')
+          : 'Social Share',
       params = 'width=' + width + ',height=' + height + ',resizable=' + resize,
-      url = ((typeof url !== undefined) ? url : this.attr('title')),
+      url = typeof url !== undefined ? url : this.attr('title'),
       object = null;
 
     object = window.open(url, title, params).focus();
-  }
-}(jQuery));
+  };
+})(jQuery);
 
 function getQueryStrings() {
   var assoc = {};
@@ -38,14 +40,17 @@ function getQueryStrings() {
 
 function copyToClipboard(text) {
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(function() {
-      console.log('Copying to clipboard was successful!');
-    }, function(err) {
-      console.error('Could not copy text: ', err);
-    });
+    navigator.clipboard.writeText(text).then(
+      function () {
+        console.log('Copying to clipboard was successful!');
+      },
+      function (err) {
+        console.error('Could not copy text: ', err);
+      }
+    );
   } else {
     console.warn('clipboard API not available. Falling back to prompt.');
-    prompt("Copy to clipboard: Ctrl+C, Enter", text);
+    prompt('Copy to clipboard: Ctrl+C, Enter', text);
   }
 }
 
@@ -72,11 +77,11 @@ function getShareLink(target, url, text) {
     case 'whatsapp':
       href = 'https://api.whatsapp.com/send?text=' + text + '%20' + url;
       break;
-    
+
     case 'instagram':
       href = '';
       break;
-  };
+  }
 
   return href;
 }
@@ -95,31 +100,31 @@ function updateSocialLinks(url) {
   });
 }
 
-var shareDomain = "https://lsd.formaviva.com/";
-var referralEndpoint = "http://0.0.0.0:3001";
+var shareDomain = 'https://lsd.formaviva.com/';
+var referralEndpoint = 'http://0.0.0.0:3001';
 
 function initReferral(referralEndpoint, shareDomain) {
   $('#referralForm').on('submit', function (e) {
     e.preventDefault();
     $.ajax({
       url: referralEndpoint + '/invite',
-      type: "GET", // POST
+      type: 'GET', // POST
       data: {
-        'email': $('#email').val(),
-        'name': $('#name').val(),
-        'referrer': $('#referrer').val()
+        email: $('#email').val(),
+        name: $('#name').val(),
+        referrer: $('#referrer').val(),
       },
       success: function (res) {
         var referralCode = res.referral_code;
-        var referralLink = shareDomain + "?ref=" + referralCode;
+        var referralLink = shareDomain + '?ref=' + referralCode;
 
         // alert('Your referral code is: ' + res.referral_code);
         // var text = `Your referral code is: ${res.referral_code}, position: ${res.num_row}`
 
-        $("#positionNum").text(res.num_row);
-        $("#referralLink").val(referralLink);
-        $("#referralCode").text(referralCode);
-        $("#copylink").click(function() {
+        $('#positionNum').text(res.num_row);
+        $('#referralLink').val(referralLink);
+        $('#referralCode').text(referralCode);
+        $('#copylink').click(function () {
           copyToClipboard(referralLink);
         });
 
@@ -131,8 +136,7 @@ function initReferral(referralEndpoint, shareDomain) {
       },
       error: function (jqXHR, textStatus, errorMessage) {
         alert(errorMessage);
-      }
+      },
     });
   });
-
 }
